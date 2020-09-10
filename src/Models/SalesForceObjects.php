@@ -1,5 +1,5 @@
 <?php
-namespace iabuhilal\Salesforce\Exception;
+namespace iabuhilal\Salesforce;
 
 class ActionOverrides {
     public $formFactor; //String
