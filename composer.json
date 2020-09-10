@@ -1,6 +1,6 @@
 {
   "name": "iabuhilal/php-salesforce-kit",
-  "description": "php salesforce rest api and bulk api v2 functions",
+  "description": "PHP Salesforce Rest API & Bulk API v2 tool kit ",
 
   "license": "MIT",
   "keywords": [
