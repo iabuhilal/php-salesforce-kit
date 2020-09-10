@@ -1,0 +1,30 @@
+{
+  "name": "iabuhilal/php-salesforce-api-kit",
+  "description": "php salesforce rest api and bulk api v2 functions",
+
+  "license": "MIT",
+  "keywords": [
+    "iabuhilal",
+    "php salesforce",
+    "php salesforce rest",
+    "php salesforce rest api",
+    "php salesforce bulk api v2",
+    "php"
+  ],
+  "authors": [
+    {
+      "name": "Ihab AbuHilal",
+      "email": "iabuhilal.usa@gmail.com",
+      "homepage": "https://github.com/iabuhilal"
+    }
+  ],
+  "require": {
+    "guzzlehttp/guzzle": "^6.2",
+    "php": ">=5.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "iabuhilal\\Salesforce\\": "src/"
+    }
+  }
+}

@@ -1,0 +1,3 @@
+https://whoisryosuke.com/blog/2018/how-to-create-a-php-package-for-composer/
+
+https://www.youtube.com/watch?v=o6hKXhMj-HQ&ab_channel=JetBrainsTV
