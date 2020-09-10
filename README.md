@@ -8,7 +8,7 @@ this is based on
 Via Composer
 
 ``` bash
-composer require iabuhilal/php-salesforce-api-kit
+composer require iabuhilal/php-salesforce-kit
 ```
 
 # Getting Started
