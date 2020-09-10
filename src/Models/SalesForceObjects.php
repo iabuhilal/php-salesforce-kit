@@ -1,4 +1,6 @@
 <?php
+namespace iabuhilal\Salesforce\Exception;
+
 class ActionOverrides {
     public $formFactor; //String
     public $isAvailableInTouch; //boolean
