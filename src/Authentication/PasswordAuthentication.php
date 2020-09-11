@@ -8,52 +8,72 @@ use GuzzleHttp\Client;
 class PasswordAuthentication implements AuthenticationInterface
 {
     protected $client;
-    protected $endPoint;
+    protected $end_point;
     protected $options;
+
     protected $access_token;
     protected $instance_url;
+    protected $token_type;
+    protected $issued_at;
 
-    public function __construct(array $options)
+    protected $accessTokenResponse;
+
+    public function __construct(array $options, $is_production)
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $this->endPoint = 'https://login.salesforce.com/';
+        $this->is_production =$is_production;
+        $this->end_point = $is_production ? 'https://login.salesforce.com/' : 'https://test.salesforce.com/';
         $this->options = $options;
     }
 
     public function authenticate()
     {
         $client = new Client();
+        $request = $client->request('post', "{$this->end_point}services/oauth2/token", ['form_params' => $this->options]);
 
-        $request = $client->request('post', "{$this->endPoint}services/oauth2/token", ['form_params' => $this->options]);
         $response = json_decode($request->getBody(), true);
 
         if ($response) {
+            /*
             $this->access_token = $response['access_token'];
             $this->instance_url = $response['instance_url'];
+            $this->token_type = $response['token_type'];
+            $this->issued_at = $response['issued_at'];
+            */
+            $mapper = new JsonMapper();
+            $mapper->bStrictNullTypes = false;
+            $accessTokenResponse = $mapper->map(
+                $response,
+                new \iabuhilal\Salesforce\Models\AccessTokenResponse()
+            );
+            $this->accessTokenResponse = $accessTokenResponse;
+            return $accessTokenResponse;
 
-            $_SESSION['salesforce'] = $response;
         } else {
             throw new SalesforceAuthentication($request->getBody());
         }
     }
 
-    public function setEndpoint($endPoint)
+    public function getAccessTokenResponse()
     {
-        $this->endPoint = $endPoint;
+        return $this->accessTokenResponse;
     }
 
     public function getAccessToken()
     {
-        return $this->access_token;
+        return $this->accessTokenResponse->access_token;
     }
 
     public function getInstanceUrl()
     {
-        return $this->instance_url;
+        return $this->accessTokenResponse->instance_url;
     }
+
+    public function getTokenType()
+    {
+        return $this->accessTokenResponse->token_type;
+    }
+
+
 }
 
 ?>
