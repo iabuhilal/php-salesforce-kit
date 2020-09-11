@@ -4,6 +4,8 @@ namespace iabuhilal\Salesforce\Authentication;
 
 use iabuhilal\Salesforce\Exception\SalesforceAuthentication;
 use GuzzleHttp\Client;
+use iabuhilal\Salesforce\Models\AccessTokenResponse;
+use Netresearch\JsonMapper;
 
 class PasswordAuthentication implements AuthenticationInterface
 {
@@ -43,7 +45,7 @@ class PasswordAuthentication implements AuthenticationInterface
             $mapper->bStrictNullTypes = false;
             $accessTokenResponse = $mapper->map(
                 $response,
-                new \iabuhilal\Salesforce\Models\AccessTokenResponse()
+                new AccessTokenResponse()
             );
             $this->accessTokenResponse = $accessTokenResponse;
             return $accessTokenResponse;
