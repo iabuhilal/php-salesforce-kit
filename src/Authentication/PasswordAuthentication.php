@@ -3,9 +3,9 @@
 namespace iabuhilal\Salesforce\Authentication;
 
 use iabuhilal\Salesforce\Exception\SalesforceAuthentication;
-use GuzzleHttp\Client;
 use iabuhilal\Salesforce\Models\AccessTokenResponse;
-use Netresearch\JsonMapper;
+use GuzzleHttp\Client;
+use JsonMapper;
 
 class PasswordAuthentication implements AuthenticationInterface
 {
@@ -27,33 +27,26 @@ class PasswordAuthentication implements AuthenticationInterface
         $this->options = $options;
     }
 
-    public function authenticate()
+    public function authenticate() : AccessTokenResponse
     {
         $client = new Client();
         $request = $client->request('post', "{$this->end_point}services/oauth2/token", ['form_params' => $this->options]);
 
-        $response = json_decode($request->getBody(), true);
+        //$response = json_decode($request->getBody(), true);
+        $response = json_decode($request->getBody());
 
         if ($response) {
-            /*
-            $this->access_token = $response['access_token'];
-            $this->instance_url = $response['instance_url'];
-            $this->token_type = $response['token_type'];
-            $this->issued_at = $response['issued_at'];
-            */
             $mapper = new JsonMapper();
             $mapper->bStrictNullTypes = false;
             $accessTokenResponse = $mapper->map(
                 $response,
                 new AccessTokenResponse()
             );
-            $this->accessTokenResponse = $accessTokenResponse;
-            return $accessTokenResponse;
-
+             return $accessTokenResponse;
         } else {
             throw new SalesforceAuthentication($request->getBody());
         }
-    }
+    } // end authenticate
 
     public function getAccessTokenResponse()
     {

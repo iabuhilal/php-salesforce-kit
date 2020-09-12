@@ -3,46 +3,66 @@
 namespace iabuhilal\Salesforce;
 
 use GuzzleHttp\Client;
+use iabuhilal\Salesforce\Models\AccessTokenResponse;
+use iabuhilal\Salesforce\Models\CreateJobResponse;
+use iabuhilal\Salesforce\Models\GetJobInfoResponse;
+
+
+use JsonMapper;
+
+
 /* use Exception\Salesforce as SalesforceException; */
+
+class CloseJobStateEnum
+{
+    const COMPLETE = 'UploadComplete';
+    const ABORT = 'Aborted';
+
+}
+
+class JobStateEnum
+{
+    const Open = 'Open';
+    const UploadComplete = 'UploadComplete';
+    const InProgress = 'InProgress';
+    const Aborted = 'Aborted';
+    const JobComplete = 'JobComplete';
+    const Failed = 'Failed';
+}
+
+class JobRecordsResultType
+{
+    const successfulResults = 'successfulResults';
+    const failedResults = 'failedResults';
+    const unprocessedrecords = 'unprocessedrecords';
+
+
+}
+
 
 class SalesforceFunctions
 {
     protected $instance_url;
     protected $access_token;
     protected $tokenType;
-    protected $salesforce;
+    protected $accessTokenResponse;
     protected $apiVersion;
 
 
 
-    public function __construct($salesforce)
+    public function __construct(AccessTokenResponse $accessTokenResponse, int $apiVersion)
     {
-        /*
-        if (!isset($_SESSION) and !isset($_SESSION['salesforce'])) {
-            throw new SalesforceException('Access Denied', 403);
-        }
 
-        $this->instance_url = $_SESSION['salesforce']['instance_url'];
-        $this->access_token = $_SESSION['salesforce']['access_token'];
-        $this->apiVersion = $_SESSION['salesforce']['apiVersion'];
-        */
-        $this->salesforce =$salesforce;
+        $this->access_token     = $accessTokenResponse->getAccessToken();
+        $this->instance_url     = $accessTokenResponse->getInstanceUrl();
+        $this->tokenType        = $accessTokenResponse->getTokenType();
 
-
-        $this->access_token = $salesforce->getAccessToken();
-        $this->instance_url = $salesforce->getInstanceUrl();
-        $this->tokenType =  $salesforce->getTokenType();
-        $this->apiVersion  = "49.0";
-
-
-
+        $this->accessTokenResponse =$accessTokenResponse;
+        $this->apiVersion  = ((int)$apiVersion ) . ".0";
 
     }
 
-    public function getApiVersion($apiVersion)
-    {
-        return  ((int)$apiVersion ) . ".0";
-    }
+
 
     public function query($query)
     {
@@ -178,21 +198,17 @@ class SalesforceFunctions
 
 
     }
-
-
-
-    public function createJob()
+    /*
+     * createJob($jobSettings)
+     * Creates a job, which represents a bulk operation (and associated data) that is
+     * sent to Salesforce for asynchronous processing. Provide job data via an Upload
+     * Job Data request, or as part of a multipart create job request.
+     * https://developer.salesforce.com/docs/atlas.en-us.api_bulk_v2.meta/api_bulk_v2/create_job.htm
+     * 
+     */
+    public function createJob($jobSettings) : CreateJobResponse
     {
         $url = "$this->instance_url/services/data/v$this->apiVersion/jobs/ingest/";
-
-        //var_dump($url);
-
-        $data = [
-            "object" => "Account",
-            "contentType" => "CSV",
-            "operation" => "insert",
-            "lineEnding" => "CRLF"
-        ];
 
         $client = new Client(['verify' => false ]);
         $request = $client->request('POST', $url, [
@@ -202,42 +218,37 @@ class SalesforceFunctions
                 'Accept' => 'application/json'
 
             ],
-            'json' => $data
+            'json' => $jobSettings
         ]);
 
-
-        // var_dump($request->getBody());
-
         $status = $request->getStatusCode();
-
         if ($status != 200) {
             die("Error: call to URL $url failed with status $status, response: " . $request->getReasonPhrase());
         }
 
+       // $response = json_decode($request->getBody(), true);
+        $response = json_decode($request->getBody());
 
+        $mapper = new JsonMapper();
+        $mapper->bStrictNullTypes = false;
+        $createJobResponse = $mapper->map(
+            $response,
+            new CreateJobResponse()
+        );
+
+        // Set the API token returned by create job
+        $this->apiVersion =  $createJobResponse->getApiVersion() . ".0";;
+
+        return $createJobResponse;
+        /*
         $response = json_decode($request->getBody(), true);
+        var_dump($response);
+        // Set the API token returned by create job
+        $this->apiVersion =  $response['apiVersion'];
 
-        // var_dump($response);
-
-        $id = $response["id"];
-        /* response sample
-          'id' => string '7503i000009NRgkAAG' (length=18)
-          'operation' => string 'insert' (length=6)
-          'object' => string 'Contact' (length=7)
-          'createdById' => string '0053i000000qAL7AAM' (length=18)
-          'createdDate' => string '2020-09-09T17:59:11.000+0000' (length=28)
-          'systemModstamp' => string '2020-09-09T17:59:11.000+0000' (length=28)
-          'state' => string 'Open' (length=4)
-          'concurrencyMode' => string 'Parallel' (length=8)
-          'contentType' => string 'CSV' (length=3)
-          'apiVersion' => float 45
-          'contentUrl' => string 'services/data/v45.0/jobs/ingest/7503i000009NRgkAAG/batches' (length=58)
-          'lineEnding' => string 'CRLF' (length=4)
-          'columnDelimiter' => string 'COMMA' (length=5)
-          */
         return $response;
-
-    }
+        */
+    } // end createJob
 
 
     public function getAllJobs()
@@ -274,25 +285,23 @@ class SalesforceFunctions
         return $response;
     }
 
-    public function closeJob($jobID, $apiVersion)
+    /*
+     *  https://developer.salesforce.com/docs/atlas.en-us.api_bulk_v2.meta/api_bulk_v2/close_job.htm
+     */
+    public function closeJob($jobID, $jobStateEnum)
     {
-        // https://developer.salesforce.com/docs/atlas.en-us.api_bulk_v2.meta/api_bulk_v2/close_job.htm
-        $url = "$this->instance_url/services/data/v$apiVersion/jobs/ingest/$jobID/";
+        $url = "$this->instance_url/services/data/v$this->apiVersion/jobs/ingest/$jobID/";
         // var_dump($url);
-
+        // var_dump($jobStateEnum);
         $client = new Client(['verify' => false ]);
-
         $headers = [
             'Authorization' => "OAuth $this->access_token",
             'Content-Type' => 'application/json; charset=UTF-8',
             'Accept' => 'application/json'
         ];
-
         $data = [
-            "state" => "UploadComplete"
+            "state" => $jobStateEnum
         ];
-
-
 
         $request = $client->request('PATCH', $url, [
             'headers' => $headers,
@@ -302,13 +311,13 @@ class SalesforceFunctions
         // var_dump($request);
         $response = json_decode($request->getBody(), true);
 
-         var_dump($response);
-
+        // var_dump($response);
+        /*
         foreach ($response as $key => $value)
         {
             echo "-->$key:$value<br/>";
         }
-
+        */
 
         /*
          * array (size=10)
@@ -333,7 +342,7 @@ class SalesforceFunctions
     public function uploadCSV($jobID, $contentUrl,$content)
     {
         // https://developer.salesforce.com/docs/atlas.en-us.api_bulk_v2.meta/api_bulk_v2/upload_job_data.htm
-        var_dump($content);
+        //var_dump($content);
 
         $url = "$this->instance_url/$contentUrl/";
        //  var_dump($url);
@@ -360,6 +369,75 @@ class SalesforceFunctions
         }
 
         return true;
+
+    }
+
+
+    /* state
+     * The current state of processing for the job. Values include:
+     * Open             : The job has been created, and job data can be uploaded to the job.
+     * UploadComplete   : All data for a job has been uploaded, and the job is ready to be queued and processed. No new data can be added to this job. You can’t edit or save a closed job.
+     * InProgress       : The job is being processed by Salesforce. This includes automatic optimized chunking of job data and processing of job operations.
+     * Aborted          : The job has been aborted. You can abort a job if you created it or if you have the “Manage Data Integrations” permission.
+     * JobComplete      : The job was processed by Salesforce.
+     * Failed           : Some records in the job failed. Job data that was successfully processed isn’t rolled back.
+     */
+
+    public function getJobInfo($jobID) : GetJobInfoResponse {
+
+        $url = "$this->instance_url/services/data/v$this->apiVersion/jobs/ingest/$jobID";
+
+        $headers = [
+            'Authorization' => "OAuth $this->access_token",
+            'Content-Type' => 'application/json; charset=UTF-8',
+            'Accept' => 'application/json'
+        ];
+
+        $client = new Client(['verify' => false ]);
+        $request = $client->request('GET', $url, [
+            'headers' => $headers
+        ]);
+
+
+        $response = json_decode($request->getBody());
+
+        $mapper = new JsonMapper();
+        $mapper->bStrictNullTypes = false;
+        $getJobInfoResponse = $mapper->map(
+            $response,
+            new GetJobInfoResponse()
+        );
+
+
+        return $getJobInfoResponse;
+        
+
+        /*
+        $response = json_decode($request->getBody(), true);
+        echo($request->getBody());
+        return $response;
+        */
+
+
+    }
+
+
+    public function getJobRecordResults($jobID,$jobRecordsResultType)  {
+
+        $url = "$this->instance_url/services/data/v$this->apiVersion/jobs/ingest/$jobID/$jobRecordsResultType";
+
+        $headers = [
+            'Authorization' => "OAuth $this->access_token",
+            'Content-Type' => 'application/json; charset=UTF-8',
+            'Accept' => 'application/json'
+        ];
+
+        $client = new Client(['verify' => false ]);
+        $request = $client->request('GET', $url, [
+            'headers' => $headers
+        ]);
+        $response =$request->getBody();
+        return $response;
 
     }
 
