@@ -62,6 +62,218 @@ class SalesforceFunctions
 
     }
 
+    // https://ashwanisoni.wordpress.com/2017/01/18/force-com-tooling-api-create-apex-class-apex-trigger-dynamically-and-updatedelete-apex-trigger-apex-class-using-tooling-api-with-rest-api/
+    // https://desisfdeveloper.wordpress.com/2016/07/13/salesforce-tooling-api-create-update-and-delete-apex-class-dynamically-using-tooling-api-with-rest-api/
+    // https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/intro_api_tooling.htm
+    public function createApexClass($className, $classBody){
+        $endpoint = "https://na1.salesforce.com/services/data/v$this->apiVersion/tooling/sobjects";
+        $url = "$endpoint/ApexClass";
+        $method = "POST";
+        $client = new Client();
+
+        try
+        {
+        $request = $client->request($method, $url, [
+            'headers' => [
+                'Authorization' => "OAuth {$this->access_token}",
+                'Content-type' => 'application/json'
+            ] ,
+            'json' => [
+                'Name' => "$className",
+                'Body' => $classBody
+            ]
+
+        ]);
+
+
+        echo $request->getBody();
+        // {"id":"01p3i00000AYMsIAAX","success":true,"errors":[]}
+        $res =  json_decode($request->getBody(), true);
+        return $res['id'];
+
+
+        }
+        catch (\GuzzleHttp\Exception\ClientException $e)
+        {
+            echo "Error: " . $e->getMessage();
+
+        }
+        catch (Exception $e)
+        {
+            echo "Error: " . $e->getMessage();
+        }
+
+        return null;
+
+    }
+
+
+    public function deleteApexClass($oid){
+        $endpoint = "https://na1.salesforce.com/services/data/v$this->apiVersion/tooling/sobjects";
+        $url = "$endpoint/ApexClass/$oid";
+        $method = "DELETE";
+        $client = new Client();
+
+        try
+        {
+            $request = $client->request($method, $url, [
+                'headers' => [
+                    'Authorization' => "OAuth {$this->access_token}"
+                ]
+
+            ]);
+
+            $status = $request->getStatusCode();
+
+            if ($status != 204) {
+                throw new SalesforceException(
+                    "Error: call to URL {$url} failed with status {$status}, response: {$request->getReasonPhrase()}"
+                );
+            }
+
+
+            echo $request->getBody();
+            // {"id":"01p3i00000AYMsIAAX","success":true,"errors":[]}
+            return json_decode($request->getBody(), true);
+            /*  To delete a apex class or some other component only DELETE request is need to do
+            by passing component object’s id. If request is successful then Status code 204 will
+            be received and Apex class will be deleted from organization.
+            */
+
+
+
+        }
+        catch (\GuzzleHttp\Exception\ClientException $e)
+        {
+            echo "Error: " . $e->getMessage();
+        }
+        catch (Exception $e)
+        {
+            echo "Error: " . $e->getMessage();
+        }
+
+
+    }
+
+
+    public function getRecordId($objectType, $fieldName, $value)
+    {
+        $query = $this->query("SELECT ID , $fieldName from $objectType WHERE $fieldName = '$value'");
+        $totalSize = $query['totalSize'];
+        $done = $query['done'];
+        $records = $query['records'];
+        if ($done && $totalSize > 0 ) {
+            return  $records[0]['Id'];
+        }
+        return null;
+    }
+
+
+        public function createMetadataContainer(){
+        $endpoint = "https://na1.salesforce.com/services/data/v$this->apiVersion/tooling/sobjects";
+        $url = "$endpoint/MetadataContainer";
+        $method = "POST";
+        $client = new Client();
+
+        try
+        {
+            $request = $client->request($method, $url, [
+                'headers' => [
+                    'Authorization' => "OAuth {$this->access_token}",
+                    'Content-type' => 'application/json'
+                ] ,
+                'json' => [
+                    'Name' => "ApexContainer"
+                ]
+
+            ]);
+
+
+            echo $request->getBody();
+            // {"id":"01p3i00000AYMsIAAX","success":true,"errors":[]}
+            $res =  json_decode($request->getBody(), true);
+            return $res['id'];
+
+
+        }
+        catch (\GuzzleHttp\Exception\ClientException $e)
+        {
+            echo "Error: " . $e->getMessage();
+
+        }
+        catch (Exception $e)
+        {
+            echo "Error: " . $e->getMessage();
+        }
+
+        return null;
+
+    }
+
+
+
+
+    public function createApexClassMember($mid, $axid, $classBody){
+        // https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/tooling_api_objects_apexclassmember.htm
+        $endpoint = "https://na1.salesforce.com/services/data/v$this->apiVersion/tooling/sobjects";
+        $url = "$endpoint/ApexClassMember";
+        $method = "POST";
+        $client = new Client();
+
+        try
+        {
+            $request = $client->request($method, $url, [
+                'headers' => [
+                    'Authorization' => "OAuth {$this->access_token}",
+                    'Content-type' => 'application/json'
+                ] ,
+                'json' => [
+                    'MetadataContainerId' => $mid,
+                    'ContentEntityId' => $axid,
+                    'Body' => $classBody
+                ]
+
+            ]);
+
+
+            echo $request->getBody();
+            // {"id":"01p3i00000AYMsIAAX","success":true,"errors":[]}
+            $res =  json_decode($request->getBody(), true);
+            return $res['id'];
+
+
+        }
+        catch (\GuzzleHttp\Exception\ClientException $e)
+        {
+            echo "Error: " . $e->getMessage();
+
+        }
+        catch (Exception $e)
+        {
+            echo "Error: " . $e->getMessage();
+        }
+
+        return null;
+
+    }
+
+
+
+    public function executeAnonymousApex($apexCode)
+    {
+        $data= urlencode($apexCode);
+        $url = "{$this->instance_url}/services/data/v$this->apiVersion/tooling/executeAnonymous/?anonymousBody=$data";
+
+        $client = new Client();
+        $request = $client->request('GET', $url, [
+            'headers' => [
+                'Authorization' => "OAuth {$this->access_token}"
+            ]
+
+        ]);
+        echo $request->getBody();
+        return json_decode($request->getBody(), true);
+    }
 
 
     public function query($query)
@@ -77,9 +289,26 @@ class SalesforceFunctions
                 'q' => $query
             ]
         ]);
-
+         echo $request->getBody();
         return json_decode($request->getBody(), true);
     }
+
+    public function query_nextRecords($nextRecordsUrl)
+    {
+        $url = "{$this->instance_url}$nextRecordsUrl";
+
+        $client = new Client();
+        $request = $client->request('GET', $url, [
+            'headers' => [
+                'Authorization' => "OAuth {$this->access_token}"
+            ]
+        ]);
+        //echo $request->getBody();
+        return json_decode($request->getBody(), true);
+    }
+
+
+
 
     public function create($object, array $data)
     {
