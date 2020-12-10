@@ -113,6 +113,10 @@ Delete
 
 #### Changelog: ####
 ##### 2020.09.09 #####
+ - add closeJob function
+##### 2020.09.09 #####
  - renamed class from CRUD to SalesforceFunctions
  - add create createJob, getAllJobs functions
  - add Salesforce description objects
+
+
