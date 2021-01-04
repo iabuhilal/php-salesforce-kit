@@ -1,7 +1,7 @@
 # Php Salesforce Rest Api
 this is based on 
 ```Bijesh Shrestha``` ```bjsmasth@gmail.com```
-```iabuhilal``` ```iabuhilal.usa@gmail.com``` ```iabuhilal``` ```php rest api```
+```iabuhilal``` ```php rest api```
 
 ## Install
 
